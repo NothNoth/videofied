@@ -36,9 +36,11 @@ const (
 	FieldAuthSuccess_Unknown9  wirego.FieldId = 19
 	FieldAuthSuccess_Unknown10 wirego.FieldId = 20
 
-	FieldAuthEvent_Number  wirego.FieldId = 21
-	FieldAuthEvent_Source  wirego.FieldId = 22
-	FieldAuthEvent_Unknown wirego.FieldId = 23
+	FieldEvent_Number  wirego.FieldId = 21
+	FieldEvent_Source  wirego.FieldId = 22
+	FieldEvent_Unknown wirego.FieldId = 23
+
+	FieldReqAck_Unknown wirego.FieldId = 24
 )
 
 // Since we implement the wirego.WiregoInterface we need some structure to hold it.
@@ -96,9 +98,10 @@ func (Videofied) GetFields() []wirego.WiresharkField {
 	fields = append(fields, wirego.WiresharkField{WiregoFieldId: FieldAuthSuccess_Unknown9, Name: "Unknown 9", Filter: "videofied.auth_success_unk9", ValueType: wirego.ValueTypeString, DisplayMode: wirego.DisplayModeNone})
 	fields = append(fields, wirego.WiresharkField{WiregoFieldId: FieldAuthSuccess_Unknown10, Name: "Unknown 10", Filter: "videofied.auth_success_unk10", ValueType: wirego.ValueTypeString, DisplayMode: wirego.DisplayModeNone})
 
-	fields = append(fields, wirego.WiresharkField{WiregoFieldId: FieldAuthEvent_Number, Name: "Event number", Filter: "videofied.event_number", ValueType: wirego.ValueTypeString, DisplayMode: wirego.DisplayModeNone})
-	fields = append(fields, wirego.WiresharkField{WiregoFieldId: FieldAuthEvent_Source, Name: "Event source", Filter: "videofied.event_source", ValueType: wirego.ValueTypeString, DisplayMode: wirego.DisplayModeNone})
-	fields = append(fields, wirego.WiresharkField{WiregoFieldId: FieldAuthEvent_Unknown, Name: "Unknown", Filter: "videofied.event_unk", ValueType: wirego.ValueTypeString, DisplayMode: wirego.DisplayModeNone})
+	fields = append(fields, wirego.WiresharkField{WiregoFieldId: FieldEvent_Number, Name: "Event number", Filter: "videofied.event_number", ValueType: wirego.ValueTypeString, DisplayMode: wirego.DisplayModeNone})
+	fields = append(fields, wirego.WiresharkField{WiregoFieldId: FieldEvent_Source, Name: "Event source", Filter: "videofied.event_source", ValueType: wirego.ValueTypeString, DisplayMode: wirego.DisplayModeNone})
+	fields = append(fields, wirego.WiresharkField{WiregoFieldId: FieldEvent_Unknown, Name: "Unknown", Filter: "videofied.event_unk", ValueType: wirego.ValueTypeString, DisplayMode: wirego.DisplayModeNone})
+	fields = append(fields, wirego.WiresharkField{WiregoFieldId: FieldReqAck_Unknown, Name: "Unknown", Filter: "videofied.reqack_unk", ValueType: wirego.ValueTypeString, DisplayMode: wirego.DisplayModeNone})
 	return fields
 }
 
@@ -146,6 +149,7 @@ func (vf Videofied) DissectPacket(packetNumber int, src string, dst string, laye
 	split := strings.Split(str, ",")
 
 	switch split[0] {
+
 	case "IDENT":
 		if len(split) == 2 {
 			res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldIdentRequest_Unk, Offset: strings.Index(str, split[1]), Length: len(split[1])})
@@ -155,10 +159,12 @@ func (vf Videofied) DissectPacket(packetNumber int, src string, dst string, laye
 			res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldIdentResponse_Unk, Offset: strings.LastIndex(str, ",") + 1, Length: len(split[2])})
 			res.Info = "Client> Ident response (Serial: " + split[1] + ")"
 		}
+
 	case "SETKEY":
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldSetKey_Key, Offset: strings.Index(str, split[1]), Length: len(split[1])})
 		res.Info = "Server> Set key packet (Key: " + split[1] + ")"
 		AESKey, _ = hex.DecodeString(split[1])
+
 	case "VERSION":
 		res.Info = "Server> Version/Server challenge packet"
 		//Chunk 1 is version
@@ -168,6 +174,7 @@ func (vf Videofied) DissectPacket(packetNumber int, src string, dst string, laye
 		split2 := strings.Split(string(chunks[1]), ",")
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuth1_ServerChallenge, Offset: strings.Index(string(packet), split2[1]), Length: len(split2[1])})
 		ServerChallenge, _ = hex.DecodeString(split2[1])
+
 	case "AUTH2":
 		res.Info = "Client> Client challenge response / Client challenge"
 
@@ -184,6 +191,7 @@ func (vf Videofied) DissectPacket(packetNumber int, src string, dst string, laye
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuth2_EncryptedServerChallenge, Offset: strings.Index(str, split[1]), Length: len(split[1])})
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuth2_ClientChallenge, Offset: strings.Index(str, split[2]), Length: len(split[2])})
 		ClientChallenge, _ = hex.DecodeString(split[2])
+
 	case "AUTH3":
 		res.Info = "Server> Server challenge response"
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuth3_EncryptedClientChallenge, Offset: strings.Index(str, split[1]), Length: len(split[1])})
@@ -225,14 +233,16 @@ func (vf Videofied) DissectPacket(packetNumber int, src string, dst string, laye
 	case "EVENT":
 		res.Info = "Client> Event packet"
 		offs := len(split[0]) + 1
-		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuthEvent_Number, Offset: offs, Length: len(split[1])})
+		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldEvent_Number, Offset: offs, Length: len(split[1])})
 		offs += len(split[1]) + 1
-		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuthEvent_Source, Offset: offs, Length: len(split[2])})
+		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldEvent_Source, Offset: offs, Length: len(split[2])})
 		offs += len(split[2]) + 1
-		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuthEvent_Unknown, Offset: offs, Length: len(split[3])})
+		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldEvent_Unknown, Offset: offs, Length: len(split[3])})
 
 	case "REQACK":
 		res.Info = "Client> Request ack packet"
+		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldReqAck_Unknown, Offset: strings.Index(str, split[1]), Length: len(split[1])})
+
 	case "ACK":
 		res.Info = "Server> Ack packet"
 

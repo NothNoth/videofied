@@ -11,7 +11,7 @@ Credits to https://github.com/Mickaelh51/rsi-alarm-gateway for the protocol reve
 | Link             |  Command     | Arguments             | Description                                                                       |
 | --------------- | ------------- | --------------------- | --------------------------------------------------------------------------------- |
 | Server->Client  | IDENT         | (1000)                | Server requests identification from client                                        |
-| Client->Server  | IDENT         | (Serial number, 2)    | Client resplies with serial number                                                |
+| Client->Server  | IDENT         | (Serial number, 2)    | Client replies with serial number                                                |
 | Server->Client  | SETKEY        | (KEY)                 | Server sends AES key                                                              |
 | Server->Client  | VERSION       | (2, 0)                | Server sends its version                                                          |
 | Server->Client  | AUTH1         | (AUTH1, S_CHAL)       | Server sends a challenge: S_CHAL                                                  |
