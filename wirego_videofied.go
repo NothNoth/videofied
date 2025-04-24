@@ -170,14 +170,23 @@ func (vf Videofied) DissectPacket(packetNumber int, src string, dst string, laye
 		//Chunk 1 is version
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldVersion_High, Offset: strings.Index(str, split[1]), Length: len(split[1])})
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldVersion_High, Offset: strings.Index(str, split[2]), Length: len(split[2])})
-		//Chunk 2 is challenge
-		split2 := strings.Split(string(chunks[1]), ",")
-		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuth1_ServerChallenge, Offset: strings.Index(string(packet), split2[1]), Length: len(split2[1])})
-		ServerChallenge, _ = hex.DecodeString(split2[1])
+		if len(chunks) == 2 && len(chunks[1]) != 0 {
+			//Chunk 2 is challenge
+			split2 := strings.Split(string(chunks[1]), ",")
+			res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuth1_ServerChallenge, Offset: strings.Index(string(packet), split2[1]), Length: len(split2[1])})
+			ServerChallenge, _ = hex.DecodeString(split2[1])
+		}
+	case "AUTH1":
+		res.Info = "Server> Server challenge packet"
+		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuth1_ServerChallenge, Offset: strings.Index(string(packet), split[1]), Length: len(split[1])})
+		ServerChallenge, _ = hex.DecodeString(split[1])
 
 	case "AUTH2":
 		res.Info = "Client> Client challenge response / Client challenge"
-
+		if len(AESKey) == 0 {
+			res.Info += " (Aes key is missing)"
+			break
+		}
 		cip, _ := aes.NewCipher(AESKey)
 		out := make([]byte, cip.BlockSize())
 		cip.Encrypt(out, ServerChallenge)
@@ -195,7 +204,10 @@ func (vf Videofied) DissectPacket(packetNumber int, src string, dst string, laye
 	case "AUTH3":
 		res.Info = "Server> Server challenge response"
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuth3_EncryptedClientChallenge, Offset: strings.Index(str, split[1]), Length: len(split[1])})
-
+		if len(AESKey) == 0 {
+			res.Info += " (Aes key is missing)"
+			break
+		}
 		cip, _ := aes.NewCipher(AESKey)
 		out := make([]byte, cip.BlockSize())
 		cip.Encrypt(out, ClientChallenge)
@@ -209,6 +221,7 @@ func (vf Videofied) DissectPacket(packetNumber int, src string, dst string, laye
 
 	case "AUTH_SUCCESS":
 		res.Info = "Client> Auth success packet"
+
 		offs := len(split[0]) + 1
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldAuthSuccess_Unknown1, Offset: offs, Length: len(split[1])})
 		offs += len(split[1]) + 1
@@ -235,9 +248,14 @@ func (vf Videofied) DissectPacket(packetNumber int, src string, dst string, laye
 		offs := len(split[0]) + 1
 		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldEvent_Number, Offset: offs, Length: len(split[1])})
 		offs += len(split[1]) + 1
-		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldEvent_Source, Offset: offs, Length: len(split[2])})
-		offs += len(split[2]) + 1
-		res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldEvent_Unknown, Offset: offs, Length: len(split[3])})
+		if len(split) >= 3 {
+			res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldEvent_Source, Offset: offs, Length: len(split[2])})
+			offs += len(split[2]) + 1
+			if len(split) >= 4 {
+				res.Fields = append(res.Fields, wirego.DissectField{WiregoFieldId: FieldEvent_Unknown, Offset: offs, Length: len(split[3])})
+			}
+
+		}
 
 	case "REQACK":
 		res.Info = "Client> Request ack packet"

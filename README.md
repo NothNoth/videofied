@@ -22,3 +22,14 @@ Credits to https://github.com/Mickaelh51/rsi-alarm-gateway for the protocol reve
 | Client->Server  | REQACK        | (D)                   | Client sends an ack request                                                       |
 | Server->Client  | ACK           | ()                    | Server sends an ack                                                               |
 
+__Notes:__ 
+
+The SETKEY packet might be skipped if the device has been recently connected to the server (the last key is reused).
+
+During the IDENT response, if the second argument is set to 1 we skip the VERSION packet
+
+The challenge/responses seems to be checked at the very end of the auth section, once AUTH3 has been sent. Upon failure (wrong aes key), session is closed without notice.
+
+If opening a new connection to the server while another one is active, all connections are closed after the client IDENT.
+
+There's no keepalive, after 3 minutes the server closes the connection.
